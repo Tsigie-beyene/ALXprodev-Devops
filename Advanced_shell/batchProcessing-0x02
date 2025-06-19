@@ -6,24 +6,28 @@ OUT_DIR="pokemon_data"
 ERROR_FILE="errors.txt"
 
 mkdir -p "$OUT_DIR"
+: > "$ERROR_FILE"  # Clear old errors
 
 for NAME in "${POKEMON_LIST[@]}"; do
     echo "Fetching data for $NAME..."
-    RETRIES=0
-    SUCCESS=0
-    while [ $RETRIES -lt 3 ]; do
-        curl -s -f "$API_BASE/$NAME" -o "$OUT_DIR/${NAME}.json"
-        if [[ $? -eq 0 ]]; then
-            echo "Saved data to $OUT_DIR/${NAME}.json ✅"
-            SUCCESS=1
-            break
-        else
-            ((RETRIES++))
-            sleep 1
-        fi
-    done
 
-    if [[ $SUCCESS -eq 0 ]]; then
-        echo "Failed to fetch $NAME after 3 attempts" >> "$ERROR_FILE"
+    RESPONSE=$(curl -s -f "$API_BASE/$NAME")
+    if [[ $? -eq 0 ]]; then
+        echo "$RESPONSE" > "$OUT_DIR/${NAME}.json"
+        echo "Saved data to $OUT_DIR/${NAME}.json ✅"
+
+        # Extract and format output
+        POKEMON_NAME=$(echo "$RESPONSE" | jq -r '.name' | sed 's/.*/\u&/')
+        TYPE=$(echo "$RESPONSE" | jq -r '.types[0].type.name' | sed 's/.*/\u&/')
+        HEIGHT=$(echo "$RESPONSE" | jq -r '.height')
+        WEIGHT=$(echo "$RESPONSE" | jq -r '.weight')
+        FORMATTED_HEIGHT=$(awk "BEGIN { printf \"%.1f\", $HEIGHT / 10 }")
+        FORMATTED_WEIGHT=$(awk "BEGIN { printf \"%.0f\", $WEIGHT / 10 }")
+
+        echo "$POKEMON_NAME is of type $TYPE, weighs ${FORMATTED_WEIGHT}kg, and is ${FORMATTED_HEIGHT}m tall."
+    else
+        echo "Failed to fetch $NAME" >> "$ERROR_FILE"
     fi
+
+    sleep 1  # delay to avoid rate-limiting
 done
