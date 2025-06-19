@@ -1,0 +1,14 @@
+#!/bin/bash
+
+JSON_FILE="data.json"
+
+NAME=$(jq -r '.name' "$JSON_FILE" | sed 's/.*/\u&/')
+HEIGHT=$(jq -r '.height' "$JSON_FILE")
+WEIGHT=$(jq -r '.weight' "$JSON_FILE")
+TYPE=$(jq -r '.types[0].type.name' "$JSON_FILE" | sed 's/.*/\u&/')
+
+# Convert to metric units
+HEIGHT_METERS=$(awk "BEGIN { printf \"%.1f\", $HEIGHT / 10 }")
+WEIGHT_KG=$(awk "BEGIN { printf \"%.0f\", $WEIGHT / 10 }")
+
+echo "$NAME is of type $TYPE, weighs ${WEIGHT_KG}kg, and is ${HEIGHT_METERS}m tall."
