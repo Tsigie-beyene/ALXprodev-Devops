@@ -9,11 +9,21 @@ mkdir -p "$OUT_DIR"
 
 for NAME in "${POKEMON_LIST[@]}"; do
     echo "Fetching data for $NAME..."
-    curl -s -f "$API_BASE/$NAME" -o "$OUT_DIR/${NAME}.json"
-    if [[ $? -eq 0 ]]; then
-        echo "Saved data to $OUT_DIR/${NAME}.json ✅"
-    else
-        echo "Failed to fetch $NAME" >> "$ERROR_FILE"
+    RETRIES=0
+    SUCCESS=0
+    while [ $RETRIES -lt 3 ]; do
+        curl -s -f "$API_BASE/$NAME" -o "$OUT_DIR/${NAME}.json"
+        if [[ $? -eq 0 ]]; then
+            echo "Saved data to $OUT_DIR/${NAME}.json ✅"
+            SUCCESS=1
+            break
+        else
+            ((RETRIES++))
+            sleep 1
+        fi
+    done
+
+    if [[ $SUCCESS -eq 0 ]]; then
+        echo "Failed to fetch $NAME after 3 attempts" >> "$ERROR_FILE"
     fi
-    sleep 1  # to avoid rate limiting
 done
